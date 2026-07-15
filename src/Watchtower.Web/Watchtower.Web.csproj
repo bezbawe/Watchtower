@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Watchtower.Repository\Watchtower.Repository.csproj" />
+    <ProjectReference Include="..\Watchtower.Ingestion\Watchtower.Ingestion.csproj" />
+    <ProjectReference Include="..\Watchtower.Detection\Watchtower.Detection.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
