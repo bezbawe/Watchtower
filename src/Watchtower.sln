@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Watchtower.Ingestion.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Watchtower.LogGenerator.Tests", "Watchtower.LogGenerator.Tests\Watchtower.LogGenerator.Tests.csproj", "{FA83F7BA-0819-46C3-AA31-1B0642B45624}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Watchtower.Detection.Tests", "Watchtower.Detection.Tests\Watchtower.Detection.Tests.csproj", "{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +152,18 @@ Global
 		{FA83F7BA-0819-46C3-AA31-1B0642B45624}.Release|x64.Build.0 = Release|Any CPU
 		{FA83F7BA-0819-46C3-AA31-1B0642B45624}.Release|x86.ActiveCfg = Release|Any CPU
 		{FA83F7BA-0819-46C3-AA31-1B0642B45624}.Release|x86.Build.0 = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|x64.Build.0 = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Debug|x86.Build.0 = Debug|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|x64.ActiveCfg = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|x64.Build.0 = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|x86.ActiveCfg = Release|Any CPU
+		{54FB77E2-AC9A-482F-83F8-4FDB2B8385AA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
