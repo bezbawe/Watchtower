@@ -1,6 +1,0 @@
-@Watchtower.Api_HostAddress = http://localhost:5116
-
-GET {{Watchtower.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

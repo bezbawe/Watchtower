@@ -32,7 +32,7 @@ public class EventIngestBackgroundService(
 
                 if (batch.Count > 0)
                 {
-                    await WriteBatchAsync(batch);
+                    await WriteBatchAsync(batch, stoppingToken);
                     batch.Clear();
                 }
             }
@@ -48,15 +48,15 @@ public class EventIngestBackgroundService(
             batch.Add(logEvent);
             if (batch.Count >= batchSize)
             {
-                await WriteBatchAsync(batch);
+                await WriteBatchAsync(batch, CancellationToken.None);
                 batch.Clear();
             }
         }
         if (batch.Count > 0)
-            await WriteBatchAsync(batch);
+            await WriteBatchAsync(batch, CancellationToken.None);
     }
 
-    private async Task WriteBatchAsync(List<LogEvent> batch)
+    private async Task WriteBatchAsync(List<LogEvent> batch, CancellationToken cancellationToken)
     {
         try
         {
@@ -64,6 +64,11 @@ public class EventIngestBackgroundService(
             var repository = scope.ServiceProvider.GetRequiredService<IEventRepository>();
             await repository.AddRangeAsync(batch);
             logger.LogInformation("Ingested batch of {Count} events", batch.Count);
+
+            // Пост-обработка батча (детекция/алертинг) — в том же scope, после записи событий,
+            // когда у них уже проставлены Id. Обработчики опциональны (0..N).
+            foreach (var handler in scope.ServiceProvider.GetServices<IIngestedBatchHandler>())
+                await handler.HandleAsync(batch, cancellationToken);
         }
         catch (Exception ex)
         {

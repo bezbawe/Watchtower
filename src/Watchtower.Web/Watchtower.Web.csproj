@@ -4,6 +4,11 @@
     <ProjectReference Include="..\Watchtower.Repository\Watchtower.Repository.csproj" />
     <ProjectReference Include="..\Watchtower.Ingestion\Watchtower.Ingestion.csproj" />
     <ProjectReference Include="..\Watchtower.Detection\Watchtower.Detection.csproj" />
+    <ProjectReference Include="..\Watchtower.Alerting\Watchtower.Alerting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.*" />
   </ItemGroup>
 
   <PropertyGroup>

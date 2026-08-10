@@ -50,7 +50,7 @@ foreach (var batch in events.Chunk(options.SendBatchSize))
     catch (HttpRequestException ex)
     {
         Console.Error.WriteLine($"Failed to reach API at {options.ApiBaseUrl}: {ex.Message}");
-        Console.Error.WriteLine("Is Watchtower.Api running? (dotnet run --project src/Watchtower.Api --launch-profile http)");
+        Console.Error.WriteLine("Is Watchtower.Web running? (dotnet run --project src/Watchtower.Web --launch-profile http)");
         return 1;
     }
 

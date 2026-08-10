@@ -17,6 +17,16 @@ public class EventRepository(WatchtowerDbContext dbContext)
             .ToListAsync();
     }
 
+    public async Task<List<LogEvent>> GetSinceAsync(DateTimeOffset since, int maxRows)
+    {
+        return await db.LogEvents
+            .AsNoTracking()
+            .Where(e => e.Timestamp >= since)
+            .OrderByDescending(e => e.Timestamp)
+            .Take(maxRows)
+            .ToListAsync();
+    }
+
     public async Task<List<LogEvent>> SearchAsync(string term, int limit)
     {
         var pattern = $"%{term.Trim()}%";

@@ -1,0 +1,183 @@
+@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+@inject DashboardService Data
+@inject NavigationManager Nav
+
+<PageTitle>Watchtower — Dashboard</PageTitle>
+
+<div class="wt-head">
+    <h1>Watchtower</h1>
+    <span class="wt-live @(_live ? "on" : "off")">@(_live ? "● live" : "○ offline")</span>
+    <button class="btn btn-sm btn-outline-secondary ms-auto" @onclick="LoadAsync">Refresh</button>
+</div>
+
+@if (_snapshot is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <div class="wt-stats">
+        <div class="wt-stat"><span class="n">@_snapshot.TotalEvents</span><span class="l">events</span></div>
+        <div class="wt-stat"><span class="n">@_snapshot.TotalAlerts</span><span class="l">alerts total</span></div>
+        <div class="wt-stat"><span class="n">@_alerts.Count</span><span class="l">active alerts</span></div>
+    </div>
+
+    <div class="wt-grid">
+        <section class="wt-card wt-activity">
+            <h2>Activity — last @WindowHours h (events / hour)</h2>
+            <div class="wt-bars">
+                @foreach (var (bucket, i) in _snapshot.Activity.Select((b, i) => (b, i)))
+                {
+                    <div class="wt-bar" title="@bucket.Hour.ToLocalTime().ToString("HH:mm") — @bucket.Count">
+                        <div class="fill" style="height:@(Percent(bucket.Count, MaxActivity))%"></div>
+                        <span class="tick">@(i % 6 == 0 ? bucket.Hour.ToLocalTime().ToString("HH") : "")</span>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="wt-card wt-top">
+            <h2>Top event types</h2>
+            @foreach (var t in _snapshot.TopEventTypes)
+            {
+                <div class="wt-toprow">
+                    <span class="name">@t.EventType</span>
+                    <span class="track"><span class="fill" style="width:@(Percent(t.Count, MaxTypeCount))%"></span></span>
+                    <span class="cnt">@t.Count</span>
+                </div>
+            }
+        </section>
+
+        <section class="wt-card wt-alerts">
+            <h2>Active alerts</h2>
+            @if (_alerts.Count == 0)
+            {
+                <p class="muted">No active alerts.</p>
+            }
+            else
+            {
+                @foreach (var a in _alerts)
+                {
+                    <div class="wt-alert">
+                        <div class="row1">
+                            <span class="badge @SeverityBadge(a.Severity)">@a.Severity</span>
+                            <span class="title">@a.Title</span>
+                            <span class="when">@a.CreatedAt.ToLocalTime().ToString("HH:mm:ss")</span>
+                        </div>
+                        <div class="expl">@a.Explanation</div>
+                        <div class="meta">
+                            <span class="detector">@a.DetectorName</span>
+                            @foreach (var m in a.MitreTechniques)
+                            {
+                                <span class="mitre">@m</span>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </section>
+
+        <section class="wt-card wt-feed">
+            <h2>Recent events</h2>
+            <div class="wt-tablewrap">
+                <table class="table table-sm wt-table">
+                    <thead>
+                        <tr><th>Time</th><th>Sev</th><th>Type</th><th>Actor</th><th>Source IP</th><th>Geo</th><th>Message</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in _snapshot.RecentEvents)
+                        {
+                            <tr>
+                                <td class="nowrap">@e.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                <td>@e.Severity</td>
+                                <td>@e.EventType</td>
+                                <td>@e.Actor</td>
+                                <td class="nowrap">@e.SourceIp</td>
+                                <td>@GeoText(e)</td>
+                                <td class="msg">@e.Message</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private const int WindowHours = 24;
+
+    private DashboardSnapshot? _snapshot;
+    private readonly List<AlertNotification> _alerts = new();
+    private HubConnection? _hub;
+    private bool _live;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        await ConnectHubAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _snapshot = await Data.GetSnapshotAsync(feedLimit: 40, alertLimit: 30, windowHours: WindowHours);
+        _alerts.Clear();
+        _alerts.AddRange(_snapshot.ActiveAlerts);
+    }
+
+    private async Task ConnectHubAsync()
+    {
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Nav.ToAbsoluteUri("/alertsHub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<AlertNotification>("AlertRaised", notification =>
+            InvokeAsync(() =>
+            {
+                _alerts.Insert(0, notification);
+                StateHasChanged();
+            }));
+
+        _hub.Reconnected += _ => { _live = true; return InvokeAsync(StateHasChanged); };
+        _hub.Closed += _ => { _live = false; return InvokeAsync(StateHasChanged); };
+
+        try
+        {
+            await _hub.StartAsync();
+            _live = true;
+        }
+        catch
+        {
+            _live = false;
+        }
+    }
+
+    private int MaxActivity => _snapshot is { Activity.Count: > 0 }
+        ? Math.Max(1, _snapshot.Activity.Max(b => b.Count)) : 1;
+
+    private int MaxTypeCount => _snapshot is { TopEventTypes.Count: > 0 }
+        ? Math.Max(1, _snapshot.TopEventTypes.Max(t => t.Count)) : 1;
+
+    private static int Percent(int value, int max) => (int)Math.Round(100.0 * value / max);
+
+    private static string GeoText(LogEvent e) =>
+        string.Join(" ", new[] { e.GeoCountry, e.GeoCity }.Where(s => !string.IsNullOrEmpty(s)));
+
+    private static string SeverityBadge(string severity) => severity switch
+    {
+        "Critical" => "text-bg-danger",
+        "High" => "text-bg-warning",
+        "Medium" => "text-bg-info",
+        _ => "text-bg-secondary",
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub is not null)
+            await _hub.DisposeAsync();
+    }
+}
