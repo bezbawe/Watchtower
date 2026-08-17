@@ -1,7 +1,8 @@
 # Watchtower
 
-Учебный SIEM-lite на .NET 9: приём логов → нормализация → детекция аномалий (L1 rule-based) →
-алерты с объяснением → Blazor-дашборд с live-обновлением (SignalR) и уведомления в Telegram.
+Учебный SIEM-lite на .NET 9: приём логов → нормализация → детекция аномалий (L1 rule-based +
+L2 статистика) → алерты с объяснением → Blazor-дашборд с live-обновлением (SignalR) и
+уведомления в Telegram. Батчевая L2-детекция — по расписанию через Hangfire.
 
 Спецификация — [`docs/tz.md`](docs/tz.md); план по фазам — [`docs/plan.md`](docs/plan.md).
 
@@ -37,6 +38,12 @@
    ```
    После этого каждый новый алерт дублируется сообщением в Telegram.
 
+5. **L2 статистика + Hangfire.** Дашборд Hangfire: <http://localhost:5005/hangfire> (по умолчанию
+   только локальные запросы). Recurring job `l2-statistical` считает число событий по часам, строит
+   baseline (скользящее среднее + std, EWMA для контекста) и флагает последний завершённый час по
+   z-score. Запускается ежечасно; для демо жмите **«Trigger now»** на job'е после искусственного
+   всплеска трафика. Пороги — секция `Detection:Statistical` (`WindowHours`, `ZScoreThreshold`, …).
+
 ## Тесты
 
 ```bash
@@ -48,4 +55,5 @@ dotnet test src/Watchtower.sln
 ## Пороги детекции
 
 Вынесены в конфигурацию (секция `Detection` в `appsettings.json`): brute-force (N/окно),
-off-hours (рабочие часы), privilege-escalation (список авторизованных), impossible-travel (окно).
+off-hours (рабочие часы), privilege-escalation (список авторизованных), impossible-travel (окно),
+statistical (окно baseline, порог z-score).

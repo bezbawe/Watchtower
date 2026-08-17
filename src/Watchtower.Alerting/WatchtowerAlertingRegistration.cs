@@ -14,7 +14,11 @@ public static class WatchtowerAlertingRegistration
         services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
         services.AddHttpClient<ITelegramAlertNotifier, TelegramAlertNotifier>();
 
+        services.AddScoped<IAlertPublisher, AlertPublisher>();
         services.AddScoped<IIngestedBatchHandler, DetectionAlertingHandler>();
+
+        // L2 батчевая детекция; расписание (Hangfire) навешивает host.
+        services.AddScoped<StatisticalDetectionJob>();
         return services;
     }
 }

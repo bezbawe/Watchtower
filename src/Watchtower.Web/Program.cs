@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Watchtower.Alerting;
 using Watchtower.Detection;
@@ -21,9 +23,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSignalR();
 
 // Единый хост Watchtower: приём логов + детекция + алертинг + дашборд (§4: Api+Web схлопнуты).
-builder.Services.AddWatchtowerDbContext(
-    builder.Configuration.GetConnectionString("Watchtower")
-    ?? throw new InvalidOperationException("Connection string 'Watchtower' is not configured."));
+var connectionString = builder.Configuration.GetConnectionString("Watchtower")
+    ?? throw new InvalidOperationException("Connection string 'Watchtower' is not configured.");
+builder.Services.AddWatchtowerDbContext(connectionString);
 builder.Services.AddWatchtowerRepositories();
 builder.Services.AddWatchtowerIngestion(builder.Configuration);
 builder.Services.AddWatchtowerDetection(builder.Configuration);
@@ -32,6 +34,14 @@ builder.Services.AddWatchtowerAlerting(builder.Configuration);
 // Live-канал алертов (SignalR) — host-реализация IAlertBroadcaster.
 builder.Services.AddSingleton<IAlertBroadcaster, SignalRAlertBroadcaster>();
 builder.Services.AddScoped<DashboardService>();
+
+// Hangfire: хранилище в том же PostgreSQL + сервер для батчевой L2-детекции по расписанию.
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString)));
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
@@ -56,6 +66,13 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapHub<AlertsHub>("/alertsHub");
+
+// Hangfire-дашборд (по умолчанию только локальные запросы) + ежечасная L2-детекция.
+app.UseHangfireDashboard("/hangfire");
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<StatisticalDetectionJob>(
+    "l2-statistical",
+    job => job.RunAsync(CancellationToken.None),
+    Cron.Hourly());
 
 var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 

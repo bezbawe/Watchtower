@@ -12,6 +12,7 @@ public class DetectionOptions
     public OffHoursOptions OffHours { get; set; } = new();
     public PrivilegeEscalationOptions PrivilegeEscalation { get; set; } = new();
     public ImpossibleTravelOptions ImpossibleTravel { get; set; } = new();
+    public StatisticalOptions Statistical { get; set; } = new();
 }
 
 public class BruteForceOptions
@@ -39,4 +40,13 @@ public class PrivilegeEscalationOptions
 public class ImpossibleTravelOptions
 {
     public int WindowMinutes { get; set; } = 60;  // смена страны быстрее этого = невозможно
+}
+
+// L2 — статистика по числу событий в час: baseline (скользящее среднее + EWMA) и z-score.
+public class StatisticalOptions
+{
+    public int WindowHours { get; set; } = 72;        // сколько часов истории берём под baseline
+    public int MinBaselinePoints { get; set; } = 12;  // минимум часовых точек, иначе baseline не строим
+    public double ZScoreThreshold { get; set; } = 3.0; // |z| >= порога = аномалия
+    public double EwmaAlpha { get; set; } = 0.3;      // сглаживание EWMA (0..1), для контекста в объяснении
 }
