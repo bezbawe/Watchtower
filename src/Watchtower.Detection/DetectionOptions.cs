@@ -13,6 +13,7 @@ public class DetectionOptions
     public PrivilegeEscalationOptions PrivilegeEscalation { get; set; } = new();
     public ImpossibleTravelOptions ImpossibleTravel { get; set; } = new();
     public StatisticalOptions Statistical { get; set; } = new();
+    public MlOptions Ml { get; set; } = new();
 }
 
 public class BruteForceOptions
@@ -49,4 +50,15 @@ public class StatisticalOptions
     public int MinBaselinePoints { get; set; } = 12;  // минимум часовых точек, иначе baseline не строим
     public double ZScoreThreshold { get; set; } = 3.0; // |z| >= порога = аномалия
     public double EwmaAlpha { get; set; } = 0.3;      // сглаживание EWMA (0..1), для контекста в объяснении
+}
+
+// L3 — ML.NET SSA spike detection по числу событий в час: модель сама учит структуру ряда,
+// без ручных порогов вроде z-score.
+public class MlOptions
+{
+    public int WindowHours { get; set; } = 72;         // сколько часов истории берём под ряд
+    public int MinBaselinePoints { get; set; } = 20;   // минимум часовых точек, иначе модель не обучаем
+    public double Confidence { get; set; } = 95;       // доверительный интервал SSA-модели, %
+    public int PValueHistoryLength { get; set; } = 8;  // окно для вычисления p-value
+    public int SeasonalityWindowSize { get; set; } = 8; // верхняя граница длины сезонности
 }

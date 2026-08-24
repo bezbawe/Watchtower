@@ -1,26 +1,27 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Watchtower.Detection;
-using Watchtower.Detection.Statistics;
+using Watchtower.Detection.MachineLearning;
 using Watchtower.Entities.Alerts;
 using Watchtower.Entities.Enums;
 using Watchtower.Repository.Interfaces;
 
 namespace Watchtower.Alerting;
 
-// L2 батчевая статистическая детекция (запускается по расписанию — Hangfire). Считает число
-// событий по часам за окно, строит baseline из прошлых часов и оценивает последний завершённый
-// час на отклонение (z-score). Аномалию публикует как объяснимый алерт тем же путём, что и L1.
-public class StatisticalDetectionJob(
+// L3 батчевая ML-детекция (запускается по расписанию — Hangfire). Считает число событий по часам
+// за окно (та же агрегация, что и L2) и прогоняет ряд через ML.NET SSA spike detection, которая
+// сама учит структуру ряда, без ручных порогов. Аномалию публикует как объяснимый алерт тем же
+// путём, что L1/L2.
+public class SpikeDetectionJob(
     IEventRepository events,
-    StatisticalAnomalyDetector detector,
+    SsaSpikeDetector detector,
     IAlertPublisher publisher,
     IOptions<DetectionOptions> options,
-    ILogger<StatisticalDetectionJob> logger)
+    ILogger<SpikeDetectionJob> logger)
 {
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        var opts = options.Value.Statistical;
+        var opts = options.Value.Ml;
         var currentHour = HourlyBucketing.FloorToHour(DateTimeOffset.UtcNow);
         var since = currentHour.AddHours(-opts.WindowHours);
 
@@ -31,7 +32,7 @@ public class StatisticalDetectionJob(
         if (buckets.Count < opts.MinBaselinePoints + 1)
         {
             logger.LogInformation(
-                "L2 statistical: not enough baseline ({Count} completed hours < {Min}); skipping",
+                "L3 ML spike: not enough data ({Count} completed hours < {Min}); skipping",
                 buckets.Count, opts.MinBaselinePoints + 1);
             return;
         }
@@ -40,7 +41,7 @@ public class StatisticalDetectionJob(
         var anomaly = detector.Evaluate(series);
         if (anomaly is null)
         {
-            logger.LogInformation("L2 statistical: last completed hour within baseline; no anomaly");
+            logger.LogInformation("L3 ML spike: last completed hour not flagged by SSA model");
             return;
         }
 
@@ -48,24 +49,23 @@ public class StatisticalDetectionJob(
         var alert = BuildAlert(anomaly, flagged, opts);
         await publisher.PublishAsync([alert], cancellationToken);
         logger.LogInformation(
-            "L2 statistical anomaly at {Hour:u}: observed {Observed}, z={Z:0.##}",
-            flagged.Hour, anomaly.Observed, anomaly.ZScore);
+            "L3 ML spike at {Hour:u}: observed {Observed}, p-value={PValue:0.###}",
+            flagged.Hour, anomaly.Observed, anomaly.PValue);
     }
 
-    private static Alert BuildAlert(StatisticalAnomaly a, HourBucket flagged, StatisticalOptions opts)
+    private static Alert BuildAlert(MlSpikeAnomaly a, HourBucket flagged, MlOptions opts)
     {
-        var direction = a.IsSpike ? "spike" : "drop";
         var hourText = $"{flagged.Hour:yyyy-MM-dd HH:00} UTC";
 
         return new Alert
         {
             Severity = AlertSeverity.Medium,
-            DetectorName = "statistical_volume",
-            Title = $"Activity {direction}: {a.Observed:0} events at {hourText}",
+            DetectorName = "ml_spike",
+            Title = $"Activity spike (ML): {a.Observed:0} events at {hourText}",
             Explanation =
-                $"Hourly event volume {direction}: observed {a.Observed:0} in hour {hourText} vs baseline " +
-                $"mean {a.BaselineMean:0.#} ± {a.BaselineStdDev:0.#} (EWMA {a.Ewma:0.#}); " +
-                $"z-score {a.ZScore:0.##} (threshold {opts.ZScoreThreshold:0.#}) over the last {opts.WindowHours} h.",
+                $"ML.NET SSA spike detection flagged hour {hourText}: observed {a.Observed:0} events; " +
+                $"raw score {a.RawScore:0.##}, p-value {a.PValue:0.###} (confidence {opts.Confidence:0.#}%) " +
+                $"over the last {opts.WindowHours} h.",
             MitreTechniques = [],
             RelatedEventIds = flagged.EventIds.Take(100).ToList(),
             Status = AlertStatus.New,

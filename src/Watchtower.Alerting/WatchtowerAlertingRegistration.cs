@@ -17,8 +17,9 @@ public static class WatchtowerAlertingRegistration
         services.AddScoped<IAlertPublisher, AlertPublisher>();
         services.AddScoped<IIngestedBatchHandler, DetectionAlertingHandler>();
 
-        // L2 батчевая детекция; расписание (Hangfire) навешивает host.
+        // L2/L3 батчевая детекция; расписание (Hangfire) навешивает host.
         services.AddScoped<StatisticalDetectionJob>();
+        services.AddScoped<SpikeDetectionJob>();
         return services;
     }
 }

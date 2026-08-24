@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Watchtower.Detection.Detectors;
+using Watchtower.Detection.MachineLearning;
 using Watchtower.Detection.Statistics;
 
 namespace Watchtower.Detection;
@@ -21,6 +22,9 @@ public static class WatchtowerDetectionRegistration
 
         // L2 — статистический детектор (не IDetector: работает не на батче, а на часовом ряде).
         services.AddSingleton(sp => new StatisticalAnomalyDetector(Opts(sp).Statistical));
+
+        // L3 — ML.NET SSA spike detection (тоже работает на часовом ряде, не на батче).
+        services.AddSingleton(sp => new SsaSpikeDetector(Opts(sp).Ml));
         return services;
     }
 

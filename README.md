@@ -1,8 +1,8 @@
 # Watchtower
 
 Учебный SIEM-lite на .NET 9: приём логов → нормализация → детекция аномалий (L1 rule-based +
-L2 статистика) → алерты с объяснением → Blazor-дашборд с live-обновлением (SignalR) и
-уведомления в Telegram. Батчевая L2-детекция — по расписанию через Hangfire.
+L2 статистика + L3 ML.NET) → алерты с объяснением → Blazor-дашборд с live-обновлением (SignalR)
+и уведомления в Telegram. Батчевая L2/L3-детекция — по расписанию через Hangfire.
 
 Спецификация — [`docs/tz.md`](docs/tz.md); план по фазам — [`docs/plan.md`](docs/plan.md).
 
@@ -44,6 +44,12 @@ L2 статистика) → алерты с объяснением → Blazor-�
    z-score. Запускается ежечасно; для демо жмите **«Trigger now»** на job'е после искусственного
    всплеска трафика. Пороги — секция `Detection:Statistical` (`WindowHours`, `ZScoreThreshold`, …).
 
+6. **L3 ML.NET + Hangfire.** Recurring job `l3-ml-spike` (та же часовая агрегация, что и L2) гоняет
+   ряд через ML.NET SSA spike detection (`DetectSpikeBySsa`) — модель сама учит структуру ряда, без
+   ручных порогов. Флагает последний завершённый час алертом `ml_spike` с raw score/p-value в
+   объяснении. Запускается ежечасно; для демо — **«Trigger now»** на `/hangfire` после всплеска.
+   Пороги — секция `Detection:Ml` (`WindowHours`, `MinBaselinePoints`, `Confidence`, …).
+
 ## Тесты
 
 ```bash
@@ -56,4 +62,4 @@ dotnet test src/Watchtower.sln
 
 Вынесены в конфигурацию (секция `Detection` в `appsettings.json`): brute-force (N/окно),
 off-hours (рабочие часы), privilege-escalation (список авторизованных), impossible-travel (окно),
-statistical (окно baseline, порог z-score).
+statistical (окно baseline, порог z-score), ml (окно ряда, confidence SSA-модели).

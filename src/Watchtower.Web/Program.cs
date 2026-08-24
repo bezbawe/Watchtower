@@ -67,10 +67,15 @@ app.MapRazorComponents<App>()
 
 app.MapHub<AlertsHub>("/alertsHub");
 
-// Hangfire-дашборд (по умолчанию только локальные запросы) + ежечасная L2-детекция.
+// Hangfire-дашборд (по умолчанию только локальные запросы) + ежечасная L2/L3-детекция.
 app.UseHangfireDashboard("/hangfire");
-app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<StatisticalDetectionJob>(
+var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+recurringJobs.AddOrUpdate<StatisticalDetectionJob>(
     "l2-statistical",
+    job => job.RunAsync(CancellationToken.None),
+    Cron.Hourly());
+recurringJobs.AddOrUpdate<SpikeDetectionJob>(
+    "l3-ml-spike",
     job => job.RunAsync(CancellationToken.None),
     Cron.Hourly());
 
