@@ -59,7 +59,15 @@
     margin: 0 0 .75rem;
 }
 
-.wt-alerts, .wt-feed { grid-column: 1 / -1; }
+.wt-alerts, .wt-feed, .wt-report { grid-column: 1 / -1; }
+
+.wt-reportform {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+    font-size: .85rem;
+}
 
 /* Activity bars */
 .wt-bars {

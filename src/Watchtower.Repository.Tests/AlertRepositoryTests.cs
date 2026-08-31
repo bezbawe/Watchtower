@@ -53,4 +53,25 @@ public class AlertRepositoryTests(PostgresFixture fixture)
         Assert.Contains(active, a => a.Title == activeTitle);
         Assert.DoesNotContain(active, a => a.Title == resolvedTitle);
     }
+
+    [Fact]
+    public async Task GetByPeriodAsync_FiltersByCreatedAtRange()
+    {
+        await using var db = fixture.CreateContext();
+        var repo = new AlertRepository(db);
+
+        var period = new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero);
+        var insideTitle = "inside-" + Guid.NewGuid();
+        var beforeTitle = "before-" + Guid.NewGuid();
+        var afterTitle = "after-" + Guid.NewGuid();
+        await repo.AddAsync(new Alert { CreatedAt = period.AddDays(2), Severity = AlertSeverity.Low, DetectorName = "X", Title = insideTitle, Explanation = "e" });
+        await repo.AddAsync(new Alert { CreatedAt = period.AddDays(-1), Severity = AlertSeverity.Low, DetectorName = "X", Title = beforeTitle, Explanation = "e" });
+        await repo.AddAsync(new Alert { CreatedAt = period.AddDays(31), Severity = AlertSeverity.Low, DetectorName = "X", Title = afterTitle, Explanation = "e" });
+
+        var inPeriod = await repo.GetByPeriodAsync(period, period.AddDays(30), 100);
+
+        Assert.Contains(inPeriod, a => a.Title == insideTitle);
+        Assert.DoesNotContain(inPeriod, a => a.Title == beforeTitle);
+        Assert.DoesNotContain(inPeriod, a => a.Title == afterTitle);
+    }
 }

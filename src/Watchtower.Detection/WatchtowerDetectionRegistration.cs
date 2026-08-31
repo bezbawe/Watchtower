@@ -17,6 +17,7 @@ public static class WatchtowerDetectionRegistration
         services.AddSingleton<IDetector>(sp => new OffHoursDetector(Opts(sp).OffHours));
         services.AddSingleton<IDetector>(sp => new PrivilegeEscalationDetector(Opts(sp).PrivilegeEscalation));
         services.AddSingleton<IDetector>(sp => new ImpossibleTravelDetector(Opts(sp).ImpossibleTravel));
+        services.AddSingleton<IDetector>(sp => new AccountCompromiseChainDetector(Opts(sp).Correlation));
 
         services.AddSingleton<DetectionEngine>();
 

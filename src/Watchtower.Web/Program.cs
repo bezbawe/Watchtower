@@ -3,6 +3,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Watchtower.Alerting;
+using Watchtower.Alerting.Reporting;
 using Watchtower.Detection;
 using Watchtower.Ingestion;
 using Watchtower.Ingestion.Buffering;
@@ -10,6 +11,7 @@ using Watchtower.Ingestion.Dtos;
 using Watchtower.Ingestion.Normalization;
 using Watchtower.Ingestion.Parsing;
 using Watchtower.Repository;
+using Watchtower.Repository.Interfaces;
 using Watchtower.Web.Alerting;
 using Watchtower.Web.Components;
 using Watchtower.Web.Hubs;
@@ -133,5 +135,17 @@ app.MapPost("/api/events/text", async (
     return Results.Accepted(value: new { accepted });
 })
 .Accepts<string>("text/plain");
+
+// PDF-отчёт по инцидентам за период (§7): алерты с CreatedAt в [from; to].
+app.MapGet("/api/reports/incidents", async (
+    DateTimeOffset from,
+    DateTimeOffset to,
+    IAlertRepository alertRepository,
+    IncidentReportService reportService) =>
+{
+    var alerts = await alertRepository.GetByPeriodAsync(from, to, 10_000);
+    var pdf = reportService.BuildIncidentReport(alerts, from, to);
+    return Results.File(pdf, "application/pdf", $"watchtower-incidents-{from:yyyyMMdd}-{to:yyyyMMdd}.pdf");
+});
 
 app.Run();

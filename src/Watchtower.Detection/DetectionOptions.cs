@@ -14,6 +14,7 @@ public class DetectionOptions
     public ImpossibleTravelOptions ImpossibleTravel { get; set; } = new();
     public StatisticalOptions Statistical { get; set; } = new();
     public MlOptions Ml { get; set; } = new();
+    public CorrelationOptions Correlation { get; set; } = new();
 }
 
 public class BruteForceOptions
@@ -41,6 +42,12 @@ public class PrivilegeEscalationOptions
 public class ImpossibleTravelOptions
 {
     public int WindowMinutes { get; set; } = 60;  // смена страны быстрее этого = невозможно
+}
+
+// Correlation: неудачный логин -> успешный логин с того же IP -> доступ к данным тем же актором.
+public class CorrelationOptions
+{
+    public int WindowMinutes { get; set; } = 20;  // максимальный зазор между каждым звеном цепочки
 }
 
 // L2 — статистика по числу событий в час: baseline (скользящее среднее + EWMA) и z-score.

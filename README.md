@@ -50,6 +50,19 @@ L2 статистика + L3 ML.NET) → алерты с объяснением 
    объяснении. Запускается ежечасно; для демо — **«Trigger now»** на `/hangfire` после всплеска.
    Пороги — секция `Detection:Ml` (`WindowHours`, `MinBaselinePoints`, `Confidence`, …).
 
+7. **MITRE ATT&CK.** Каждый алерт несёт список техник (`Alert.MitreTechniques`); на дашборде
+   бейдж с id (напр. `T1110`) показывает человекочитаемое название по наведению (tooltip) —
+   `MitreAttackCatalog`.
+
+8. **Correlation rule.** Детектор `account_compromise_chain` ловит цепочку «неудачный логин →
+   успешный логин с того же IP → тот же актор обращается к данным» в пределах короткого окна
+   (секция `Detection:Correlation:WindowMinutes`) — один Critical-алерт с `T1110`+`T1005` и всей
+   цепочкой событий в `RelatedEventIds`, а не три разрозненных сигнала.
+
+9. **PDF-отчёт по инцидентам.** Карточка «Incident report» на дашборде — выбрать период и
+   скачать PDF (`GET /api/reports/incidents?from=&to=`, `IncidentReportService` на QuestPDF):
+   список алертов за период с severity, объяснением и техниками MITRE.
+
 ## Тесты
 
 ```bash
@@ -62,4 +75,5 @@ dotnet test src/Watchtower.sln
 
 Вынесены в конфигурацию (секция `Detection` в `appsettings.json`): brute-force (N/окно),
 off-hours (рабочие часы), privilege-escalation (список авторизованных), impossible-travel (окно),
-statistical (окно baseline, порог z-score), ml (окно ряда, confidence SSA-модели).
+statistical (окно baseline, порог z-score), ml (окно ряда, confidence SSA-модели), correlation
+(окно между звеньями цепочки).

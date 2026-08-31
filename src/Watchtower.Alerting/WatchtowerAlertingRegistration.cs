@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using QuestPDF.Infrastructure;
+using Watchtower.Alerting.Reporting;
 using Watchtower.Ingestion.Buffering;
 
 namespace Watchtower.Alerting;
@@ -16,6 +18,10 @@ public static class WatchtowerAlertingRegistration
 
         services.AddScoped<IAlertPublisher, AlertPublisher>();
         services.AddScoped<IIngestedBatchHandler, DetectionAlertingHandler>();
+
+        // PDF-отчёты по инцидентам (QuestPDF Community — бесплатная лицензия для этого use case).
+        QuestPDF.Settings.License = LicenseType.Community;
+        services.AddSingleton<IncidentReportService>();
 
         // L2/L3 батчевая детекция; расписание (Hangfire) навешивает host.
         services.AddScoped<StatisticalDetectionJob>();

@@ -18,4 +18,14 @@ public class AlertRepository(WatchtowerDbContext dbContext)
             .Take(limit)
             .ToListAsync();
     }
+
+    public async Task<List<Alert>> GetByPeriodAsync(DateTimeOffset from, DateTimeOffset to, int maxRows)
+    {
+        return await db.Alerts
+            .AsNoTracking()
+            .Where(a => a.CreatedAt >= from && a.CreatedAt <= to)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(maxRows)
+            .ToListAsync();
+    }
 }
